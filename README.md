@@ -2,6 +2,22 @@
 
 Network audio bridge in Go. The server exposes a virtual sound output on its host; anything played to it is streamed to connected clients, which play it back like a normal media application. Optionally each client can send its microphone back, and it appears on the server as a normal input source.
 
+## Web UI
+
+Both server and client ship an embedded dashboard on port **4680** by default.
+
+### Server — `http://<host>:4680`
+
+![Server web UI](docs/screenshots/server-web-ui.png)
+
+Stream source, compression, levels (remote playback plus local PipeWire/Pulse sinks and sources), and live stream stats per capture path and connected client.
+
+### Client — `http://localhost:4680`
+
+![Client web UI](docs/screenshots/client-web-ui.png)
+
+Playback volume, stream stats, and settings (output/input devices, latency, playback and mic return).
+
 ## Platform / backend matrix
 
 The whole project is pure Go — no cgo on any platform, so `GOOS=windows go build` and `GOOS=darwin go build` work from any machine with just the Go toolchain.
