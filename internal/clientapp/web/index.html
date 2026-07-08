@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ears Audio Bridge</title>
+<style>
+:root{
+  --bg:#14161a;
+  --panel:#1c1f25;
+  --line:#2b2f37;
+  --text:#d7dae0;
+  --dim:#7d838d;
+  --vu:#e8a13c;
+  --vu-hot:#d0543a;
+  --ok:#7fae6a;
+  --warn:#d0543a;
+  font-size:15px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"IBM Plex Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+header{
+  display:flex;align-items:baseline;gap:1rem;
+  padding:1.1rem 1.4rem;border-bottom:1px solid var(--line);
+}
+header h1{font-size:1rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;margin:0}
+.brand{display:flex;align-items:baseline;gap:.45rem;flex-shrink:0}
+.brand .ver{font-size:.62rem;font-weight:400;color:var(--dim);letter-spacing:.04em;text-transform:none}
+header .clients{margin-left:auto;color:var(--dim);font-size:.8rem}
+header .clients b{color:var(--ok)}
+main{max-width:1080px;margin:0 auto;padding:1.4rem}
+section{margin-bottom:2rem}
+h2{
+  font-size:.72rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.45rem;
+}
+.strip{
+  display:flex;align-items:center;gap:.9rem;
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:.65rem .9rem;margin-bottom:.5rem;
+}
+.strip .name{flex:1 1 40%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem}
+.strip input[type=range]{flex:1 1 45%;accent-color:var(--vu);height:4px}
+.strip .pct{width:3.2em;text-align:right;font-size:.8rem;color:var(--dim)}
+.strip button.mute{
+  font:inherit;font-size:.68rem;letter-spacing:.12em;
+  background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);padding:.3rem .55rem;cursor:pointer;
+}
+.strip button.step{
+  font:inherit;font-size:.78rem;letter-spacing:.06em;
+  background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);padding:.25rem .45rem;cursor:pointer;line-height:1;
+}
+.strip button.mute.on{border-color:var(--vu-hot);color:var(--vu-hot)}
+.field{display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem;flex-wrap:wrap}
+.field.playback-row,.field.mic-row{flex-wrap:nowrap}
+.field label.lbl{font-size:.78rem;color:var(--dim);white-space:nowrap;flex:0 0 auto}
+.switch{
+  display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;user-select:none;
+  font-size:.82rem;color:var(--text);flex:0 0 auto;
+}
+.switch input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.switch .track{
+  width:2.15rem;height:1.1rem;background:var(--line);border-radius:999px;
+  position:relative;flex-shrink:0;transition:background .15s;
+}
+.switch .thumb{
+  position:absolute;top:2px;left:2px;width:.82rem;height:.82rem;
+  background:var(--dim);border-radius:50%;transition:transform .15s,background .15s;
+}
+.switch input:checked + .track{background:var(--vu)}
+.switch input:checked + .track .thumb{transform:translateX(1.02rem);background:#14161a}
+select,input[type=number]{
+  font:inherit;font-size:.82rem;background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:4px;padding:.45rem .6rem;min-width:0;
+}
+.field.playback-row select,.field.mic-row select{flex:1 1 10rem;max-width:100%}
+.field.mic-row input[type=number]{flex:0 0 4.2rem;width:4.2rem;padding:.45rem .4rem;text-align:center}
+.field.mic-row .latency-unit{font-size:.78rem;color:var(--dim);flex:0 0 auto}
+button.apply{
+  font:inherit;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;
+  background:var(--vu);color:#14161a;border:none;border-radius:4px;
+  padding:.5rem .95rem;cursor:pointer;font-weight:600;
+}
+button.apply:focus-visible,select:focus-visible,input:focus-visible,button.mute:focus-visible{
+  outline:2px solid var(--vu);outline-offset:2px;
+}
+.note{color:var(--dim);font-size:.75rem;margin-top:.5rem}
+.err{color:var(--warn);font-size:.75rem;margin-top:.35rem}
+.stats-controls{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.stats-controls label{font-size:.78rem;color:var(--dim)}
+.stats-controls select{min-width:7rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem}
+.stat{
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:.75rem .9rem;
+}
+.stat h3{font-size:.68rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 .55rem}
+.stat .row{display:flex;justify-content:space-between;gap:.8rem;font-size:.78rem;margin:.2rem 0}
+.stat .row span:last-child{color:var(--text);text-align:right}
+.stat .row span:first-child{color:var(--dim)}
+.stat .stat-hr{border:none;border-top:1px solid var(--line);margin:.55rem 0}
+.stat .stat-section{font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:.15rem 0 .35rem}
+.vu{height:6px;background:#0f1114;border-radius:3px;overflow:hidden}
+.vu > i{display:block;height:100%;background:var(--vu);width:0%;transition:width .04s linear}
+.vu.hot > i{background:var(--vu-hot)}
+.stat .level-hr{border:none;border-top:1px solid var(--line);margin:.55rem 0 .45rem}
+.stat .level-label{font-size:.68rem;color:var(--dim);margin-bottom:.25rem;letter-spacing:.08em;text-transform:uppercase}
+.peak-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.1rem}
+.peak-row .vu{flex:1 1 auto;min-width:0}
+.peak-row .level-pct{
+  flex:0 0 3.2em;font-size:.78rem;color:var(--dim);text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.stat-rows .level-hr{margin:.55rem 0 .45rem}
+@media (max-width:640px){
+  .strip{flex-wrap:wrap}
+  .strip .name{flex-basis:100%}
+  .field.playback-row,.field.mic-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Ears Audio Bridge</h1>
+    <span class="ver" id="appVersion"></span>
+  </div>
+  <span class="clients" id="backend"></span>
+  <span class="clients">server <b id="serverAddr">-</b></span>
+  <span class="clients" id="wireTotal"></span>
+</header>
+<main>
+  <section>
+    <h2>Playback volume</h2>
+    <div id="volumeStrips"></div>
+    <p class="note">Playback level is applied in software before your output device (0–150%). On PulseAudio/PipeWire you can also adjust the selected device volume. Server stream volume stacks on top (each up to 150%).</p>
+  </section>
+
+  <section>
+    <h2>Stream stats</h2>
+    <div class="stats-controls">
+      <label for="statsPollMs">Stats updates</label>
+      <select id="statsPollMs" aria-label="Stats update interval">
+        <option value="1000">1s</option>
+        <option value="500">500ms</option>
+        <option value="250" selected>250ms</option>
+        <option value="150">150ms</option>
+      </select>
+      <label for="peakPollMs">Peak updates</label>
+      <select id="peakPollMs" aria-label="Peak meter update interval">
+        <option value="1000">1s</option>
+        <option value="500">500ms</option>
+        <option value="250">250ms</option>
+        <option value="100" selected>100ms</option>
+        <option value="50">50ms</option>
+        <option value="10">10ms</option>
+        <option value="5">5ms</option>
+      </select>
+    </div>
+    <div class="stats-grid" id="stats"></div>
+    <p class="note" id="statsFormat"></p>
+    <p class="err" id="lastError" hidden></p>
+  </section>
+
+  <section>
+    <h2>Settings</h2>
+    <div class="field playback-row">
+      <label class="switch">
+        <input type="checkbox" id="playbackEnabled">
+        <span class="track"><span class="thumb"></span></span>
+        <span>Playback</span>
+      </label>
+      <label class="lbl" for="playbackDevice">Output</label>
+      <select id="playbackDevice"></select>
+    </div>
+    <div class="field mic-row">
+      <label class="switch">
+        <input type="checkbox" id="micEnabled">
+        <span class="track"><span class="thumb"></span></span>
+        <span>Mic return</span>
+      </label>
+      <label class="lbl" for="micDevice">Input</label>
+      <select id="micDevice"></select>
+      <label class="lbl" for="latency">Latency</label>
+      <input type="number" id="latency" min="10" max="500" step="10" title="Playback output buffer size (ms)">
+      <span class="latency-unit">ms</span>
+    </div>
+    <button class="apply" id="apply">Apply &amp; reconnect</button>
+  </section>
+</main>
+<script>
+let layout = null;
+let activeCompression = { codec: "none", bitrate: 96 };
+let volumeEditing = 0;
+const volumeTimers = new Map();
+
+const statCards = { playback: null, mic: null, clock: null, emptyNote: null };
+
+let statsPollMs = 250;
+let peakPollMs = 100;
+let layoutPollMs = 2000;
+let lastStatsPollAt = 0;
+let lastPeakPollAt = 0;
+let pollTimer = null;
+let layoutPollTimer = null;
+let statsInFlight = false;
+let peaksInFlight = false;
+const peakMeter = new Map();
+
+function setPeakSample(key, rawPeak) {
+  peakMeter.set(key, pctLevel(rawPeak ?? 0));
+}
+
+function paintPeak(card, key) {
+  if (!card?.vu) return;
+  const pct = Math.round(peakMeter.get(key) ?? 0);
+  card.vu.className = "vu" + (pct > 85 ? " hot" : "");
+  card.fill.style.width = pct + "%";
+  if (card.peakPct) card.peakPct.textContent = pct + "%";
+}
+
+function updateCardPeak(card, rawPeak, key) {
+  setPeakSample(key, rawPeak);
+  paintPeak(card, key);
+}
+
+function tickPeakMeters() {
+  if (statCards.playback) paintPeak(statCards.playback, "playback");
+  if (statCards.mic) paintPeak(statCards.mic, "mic");
+}
+
+async function api(path, body) {
+  const opts = body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {};
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+function pctLevel(v) { return Math.min(100, Math.round((v / 32767) * 100)); }
+
+function formatBytes(n) {
+  if (!n) return "0 B";
+  if (n >= 1<<30) return (n/(1<<30)).toFixed(2) + " GiB";
+  if (n >= 1<<20) return (n/(1<<20)).toFixed(2) + " MiB";
+  if (n >= 1<<10) return (n/(1<<10)).toFixed(1) + " KiB";
+  return n + " B";
+}
+
+function formatCPU(pct) {
+  const v = Math.max(0, pct ?? 0);
+  const [intPart, decPart] = v.toFixed(1).split(".");
+  return intPart.padStart(3, "\u00a0") + "." + decPart + "%";
+}
+
+function formatMB(n) {
+  const mb = (n || 0) / (1<<20);
+  const [intPart, decPart] = mb.toFixed(2).split(".");
+  return intPart.padStart(3, "\u00a0") + "." + decPart + " MB";
+}
+
+function codecLine(role, codec, bitrate) {
+  if (!codec || codec === "none") return `${role}: PCM`;
+  if (codec === "opus") return `${role}: opus @ ${bitrate} kbit/s`;
+  if (codec === "flac") return `${role}: flac lossless`;
+  return `${role}: ${codec}`;
+}
+
+function compressionLine(snap, codec) {
+  if (!codec || codec === "none") return "none";
+  const saving = snap?.compression_saving_pct ?? ((1 - (snap?.compression_ratio ?? 1)) * 100);
+  if (codec === "flac") {
+    if (saving <= 0.5) return "minimal savings on this content";
+    return `${saving.toFixed(0)}% smaller`;
+  }
+  if (saving <= 0.5) return "minimal savings";
+  return `${saving.toFixed(0)}% smaller`;
+}
+
+function wireLine(snap) {
+  const ratio = snap?.compression_ratio ?? 1;
+  const wirePct = (ratio * 100).toFixed(0);
+  const session = snap?.cumulative_ratio > 0
+    ? ` | session ${(snap.cumulative_ratio * 100).toFixed(0)}%`
+    : "";
+  return `${wirePct}%${session}`;
+}
+
+function formatLatency(ms) {
+  if (ms == null || ms <= 0) return "—";
+  return `${ms} ms`;
+}
+
+function formatNetTiming(net, field) {
+  const timing = net?.netTiming;
+  if (!timing || !timing.samples) return "";
+  const ms = field === "jitter"
+    ? (timing.jitterMs ?? timing.jitter_ms)
+    : (timing.latencyMs ?? timing.latency_ms);
+  if (ms == null || ms < 0) return "";
+  return ms.toFixed(1) + " ms";
+}
+
+function formatWallNS(ns) {
+  if (!ns) return "";
+  try {
+    return new Date(ns / 1e6).toLocaleString(undefined, { hour12: false });
+  } catch {
+    return "";
+  }
+}
+
+function formatClockOffset(ms) {
+  if (ms == null || !Number.isFinite(ms)) return "";
+  const sign = ms >= 0 ? "+" : "";
+  const ahead = ms >= 0 ? "ahead" : "behind";
+  return `${sign}${ms.toFixed(1)} ms (server ${ahead})`;
+}
+
+function formatClockRTT(ms) {
+  if (ms == null || !Number.isFinite(ms) || ms <= 0) return "";
+  return ms.toFixed(1) + " ms";
+}
+
+function updateClockCard(card, clock) {
+  if (!clock?.synced) {
+    setRow(card, "clitime", "CLIENT TIME", "—");
+    setRow(card, "srvtime", "SERVER TIME", "—");
+    setRow(card, "clockoff", "CLOCK OFFSET", "—");
+    setRow(card, "clockrtt", "SYNC RTT", "—");
+    return;
+  }
+  setRow(card, "clitime", "CLIENT TIME",
+    formatWallNS(clock.client_time_ns ?? clock.clientTimeNS) || "—");
+  setRow(card, "srvtime", "SERVER TIME",
+    formatWallNS(clock.server_time_ns ?? clock.serverTimeNS) || "—");
+  setRow(card, "clockoff", "CLOCK OFFSET",
+    formatClockOffset(clock.offset_ms ?? clock.offsetMs) || "—");
+  setRow(card, "clockrtt", "SYNC RTT",
+    formatClockRTT(clock.rtt_ms ?? clock.rttMs) || "—");
+}
+
+function syncClockCard(clock, show) {
+  const grid = document.getElementById("stats");
+  if (!show || !clock?.synced) {
+    if (statCards.clock) {
+      statCards.clock.el.remove();
+      statCards.clock = null;
+    }
+    return;
+  }
+  if (!statCards.clock) {
+    statCards.clock = makeRowCard("Clock sync", false);
+    if (statCards.mic) statCards.mic.el.after(statCards.clock.el);
+    else if (statCards.playback) statCards.playback.el.after(statCards.clock.el);
+    else grid.appendChild(statCards.clock.el);
+  }
+  updateClockCard(statCards.clock, clock);
+}
+
+function formatDuration(sec) {
+  if (!sec || sec <= 0) return "—";
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+function setSectionLabel(card, key, text) {
+  if (!text) {
+    if (card.rowEls[key]) card.rowEls[key].remove();
+    delete card.rowEls[key];
+    return;
+  }
+  let el = card.rowEls[key];
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "stat-section";
+    card.rows.appendChild(el);
+    card.rowEls[key] = el;
+  }
+  el.textContent = text;
+}
+
+function setSectionHr(card, key) {
+  if (card.rowEls[key]) return;
+  const hr = document.createElement("hr");
+  hr.className = "stat-hr";
+  card.rows.appendChild(hr);
+  card.rowEls[key] = hr;
+}
+
+function makeRowCard(title, withLevel) {
+  const el = document.createElement("div");
+  el.className = "stat";
+  const h = document.createElement("h3");
+  h.textContent = title;
+  const rows = document.createElement("div");
+  rows.className = "stat-rows";
+  el.append(h, rows);
+  const card = {el, h, rows, rowEls: {}, extra: null, hasPeak: withLevel, peakBlock: null,
+    vu: null, fill: null, peakPct: null};
+  return card;
+}
+
+function layoutPeakSection(card) {
+  if (!card.hasPeak) return;
+  if (!card.peakBlock) {
+    const hr = document.createElement("hr");
+    hr.className = "level-hr";
+    const label = document.createElement("div");
+    label.className = "level-label";
+    label.textContent = "Peak";
+    const vu = document.createElement("div");
+    vu.className = "vu";
+    const fill = document.createElement("i");
+    vu.appendChild(fill);
+    const peakPct = document.createElement("div");
+    peakPct.className = "level-pct";
+    peakPct.textContent = "0%";
+    const peakRow = document.createElement("div");
+    peakRow.className = "peak-row";
+    peakRow.append(vu, peakPct);
+    card.peakBlock = {hr, label, peakRow, vu, fill, peakPct};
+    card.vu = vu;
+    card.fill = fill;
+    card.peakPct = peakPct;
+  }
+  const pb = card.peakBlock;
+  const nodes = [pb.hr, pb.label, pb.peakRow];
+  const anchor = card.rowEls._netHr || card.rowEls._netlabel || null;
+  for (const node of nodes) {
+    if (anchor && anchor.parentNode === card.rows) card.rows.insertBefore(node, anchor);
+    else card.rows.appendChild(node);
+  }
+}
+
+function setRow(card, key, label, value) {
+  if (value === "") {
+    if (card.rowEls[key]) card.rowEls[key].remove();
+    delete card.rowEls[key];
+    return;
+  }
+  let row = card.rowEls[key];
+  if (!row) {
+    row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = "<span></span><span></span>";
+    card.rows.appendChild(row);
+    card.rowEls[key] = row;
+  }
+  row.children[0].textContent = label;
+  row.children[1].textContent = value;
+}
+
+function updateStreamCardStats(card, snap, opts) {
+  const role = opts?.role || "Decode";
+  const codec = opts?.codec ?? activeCompression.codec;
+  const bitrate = opts?.bitrate ?? activeCompression.bitrate;
+  const net = opts?.net || {};
+
+  setRow(card, "fps", "Frame rate", snap.frames_per_sec.toFixed(1) + " fps");
+  setRow(card, "rms", "RMS", pctLevel(snap.rms) + "%");
+  setRow(card, "codec", "Codec", codecLine(role, codec, bitrate));
+  setRow(card, "compsav", "Compression", compressionLine(snap, codec));
+  setRow(card, "wirepct", "Wire", wireLine(snap));
+  layoutPeakSection(card);
+
+  setSectionHr(card, "_netHr");
+  setSectionLabel(card, "_netlabel", "Network");
+
+  setRow(card, "endpoint", "IP", opts?.endpoint || "");
+  setRow(card, "bw", "Wire bandwidth", snap.bandwidth_kbps.toFixed(0) + " kbit/s");
+  setRow(card, "pcmbw", "PCM bandwidth", snap.pcm_bandwidth_kbps.toFixed(0) + " kbit/s");
+  setRow(card, "totalbw", "Total bandwidth", (snap.session_bandwidth_kbps ?? 0).toFixed(0) + " kbit/s");
+  setRow(card, "ingress", "Total ingress", net.totalIngressKbps != null
+    ? net.totalIngressKbps.toFixed(0) + " kbit/s" : "");
+  setRow(card, "egress", "Total egress", net.totalEgressKbps != null
+    ? net.totalEgressKbps.toFixed(0) + " kbit/s" : "");
+  setRow(card, "status", "Status", net.status || "");
+  setRow(card, "framems", "Frame size", net.wireFrameMs != null ? net.wireFrameMs + " ms" : "");
+  setRow(card, "lat", "Buffer latency", formatLatency(opts?.latencyMs));
+  setRow(card, "netlat", "Network latency", formatNetTiming(net, "latency"));
+  setRow(card, "netjit", "Jitter", formatNetTiming(net, "jitter"));
+  setRow(card, "connected", "Connected", net.connectedSec != null ? formatDuration(net.connectedSec) : "");
+  setRow(card, "frames", "Frames", String(snap.frames ?? 0));
+  setRow(card, "drop", "Dropped", String(snap.dropped));
+  setRow(card, "wire", "Wire total", snap.total_wire || formatBytes(snap.wire_bytes));
+  setRow(card, "pcm", "PCM total", snap.total_pcm || "");
+}
+
+function updateHeader(data) {
+  document.getElementById("serverAddr").textContent = data.server || layout?.server || "-";
+  const ingress = data.stats?.total_ingress_kbps ?? data.stats?.playback?.bandwidth_kbps ?? 0;
+  document.getElementById("wireTotal").innerHTML =
+    `ingress <b>${ingress.toFixed(0)}</b> kbit/s`;
+
+  const proc = data.stats?.process;
+  const backend = layout?.backend || data.backend || "";
+  let backendText = backend ? `${backend} backend` : "";
+  if (proc) {
+    backendText += ` | CPU: ${formatCPU(proc.cpu_percent)} | RAM: ${formatMB(proc.rss_bytes)}`;
+  }
+  document.getElementById("backend").textContent = backendText;
+}
+
+function updateHeaderFromLayout(data) {
+  if (data.version) document.getElementById("appVersion").textContent = data.version;
+  document.getElementById("serverAddr").textContent = data.server ?? "-";
+  const proc = data.process ?? data.stats?.process;
+  const backend = layout?.backend || data.backend || "";
+  let backendText = backend ? `${backend} backend` : "";
+  if (proc) {
+    backendText += ` | CPU: ${formatCPU(proc.cpu_percent)} | RAM: ${formatMB(proc.rss_bytes)}`;
+  }
+  document.getElementById("backend").textContent = backendText;
+}
+
+function updateStatsPeaks(data) {
+  const peaks = data.peaks;
+  if (!peaks) return;
+  if (statCards.playback) updateCardPeak(statCards.playback, peaks.playback?.peak, "playback");
+  if (statCards.mic) updateCardPeak(statCards.mic, peaks.mic?.peak, "mic");
+}
+
+function updateStatsPanel(data) {
+  const st = data.stats;
+  if (!st) return;
+
+  activeCompression = {
+    codec: data.compression?.codec || "none",
+    bitrate: data.compression?.bitrate_kbps || 96,
+  };
+  const codec = activeCompression.codec;
+  const bitrate = activeCompression.bitrate;
+  const grid = document.getElementById("stats");
+
+  if (data.playback_enabled) {
+    if (!statCards.playback) {
+      statCards.playback = makeRowCard("Playback rx", true);
+      if (statCards.emptyNote) {
+        statCards.emptyNote.remove();
+        statCards.emptyNote = null;
+      }
+      grid.appendChild(statCards.playback.el);
+    }
+    updateStreamCardStats(statCards.playback, st.playback, {
+      role: "Decode",
+      codec,
+      bitrate,
+      endpoint: data.server || st.server,
+      latencyMs: st.playback_latency_ms,
+      net: {
+        totalIngressKbps: st.total_ingress_kbps,
+        status: data.status,
+        wireFrameMs: st.wire_frame_ms,
+        connectedSec: st.connected_sec,
+        netTiming: st.playback_net,
+      },
+    });
+    setRow(statCards.playback, "egress", "Total egress", "");
+  } else if (statCards.playback) {
+    statCards.playback.el.remove();
+    statCards.playback = null;
+    peakMeter.delete("playback");
+  }
+
+  if (data.mic_enabled) {
+    if (!statCards.mic) {
+      statCards.mic = makeRowCard("Mic tx", true);
+      if (statCards.playback) statCards.playback.el.after(statCards.mic.el);
+      else grid.appendChild(statCards.mic.el);
+    }
+    updateStreamCardStats(statCards.mic, st.mic, {
+      role: "Mic",
+      codec: "none",
+      endpoint: data.server || st.server,
+      latencyMs: 20,
+      net: {
+        totalEgressKbps: st.total_egress_kbps,
+        status: data.status,
+        wireFrameMs: 20,
+        connectedSec: st.connected_sec,
+      },
+    });
+    setRow(statCards.mic, "codec", "Codec", "Mic: raw PCM");
+    setRow(statCards.mic, "compsav", "Compression", "none");
+    setRow(statCards.mic, "wirepct", "Wire", "100%");
+    setRow(statCards.mic, "ingress", "Total ingress", "");
+  } else if (statCards.mic) {
+    statCards.mic.el.remove();
+    statCards.mic = null;
+    peakMeter.delete("mic");
+  }
+
+  if (!data.playback_enabled && !data.mic_enabled) {
+    if (!statCards.emptyNote) {
+      statCards.emptyNote = document.createElement("p");
+      statCards.emptyNote.className = "note";
+      statCards.emptyNote.textContent = "Enable playback or mic in settings.";
+      grid.appendChild(statCards.emptyNote);
+    }
+  } else if (statCards.emptyNote) {
+    statCards.emptyNote.remove();
+    statCards.emptyNote = null;
+  }
+
+  syncClockCard(st.clock, data.status === "connected");
+
+  const comp = data.compression || {};
+  document.getElementById("statsFormat").textContent =
+    `Stream ${data.audio_format || "-"} | mic ${data.mic_format || "-"} | codec ${comp.codec || "none"}` +
+    (comp.codec === "opus" ? ` @ ${comp.bitrate_kbps} kbit/s` :
+     comp.codec === "flac" ? " | lossless" : "");
+
+  const err = document.getElementById("lastError");
+  if (data.last_error && data.status !== "connected") {
+    err.hidden = false;
+    err.textContent = data.last_error;
+  } else {
+    err.hidden = true;
+    err.textContent = "";
+  }
+}
+
+function fillDeviceSelect(sel, devices, current) {
+  sel.innerHTML = "";
+  for (const d of devices || []) {
+    const o = document.createElement("option");
+    o.value = d.name;
+    o.textContent = d.description || d.name || "System default";
+    sel.appendChild(o);
+  }
+  sel.value = current || "";
+}
+
+function queueVolume(key, fn) {
+  clearTimeout(volumeTimers.get(key));
+  volumeTimers.set(key, setTimeout(fn, 40));
+}
+
+function volumeStrip({label, value, muted, min, max, onSet, onMute}) {
+  const el = document.createElement("div");
+  el.className = "strip";
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = label;
+  const range = document.createElement("input");
+  range.type = "range";
+  range.min = min;
+  range.max = max;
+  range.value = value;
+  range.setAttribute("aria-label", label);
+  const pct = document.createElement("span");
+  pct.className = "pct";
+  pct.textContent = value + "%";
+  const dec = document.createElement("button");
+  dec.type = "button";
+  dec.className = "step";
+  dec.textContent = "‹";
+  const inc = document.createElement("button");
+  inc.type = "button";
+  inc.className = "step";
+  inc.textContent = "›";
+  const muteBtn = document.createElement("button");
+  muteBtn.type = "button";
+  muteBtn.className = "mute" + (muted ? " on" : "");
+  muteBtn.textContent = muted ? "MUTED" : "MUTE";
+
+  function apply(v, fromUser) {
+    v = Math.max(min, Math.min(max, Math.round(v)));
+    range.value = v;
+    pct.textContent = v + "%";
+    if (fromUser) onSet(v);
+  }
+
+  range.oninput = () => apply(+range.value, true);
+  dec.onclick = () => apply(+range.value - 1, true);
+  inc.onclick = () => apply(+range.value + 1, true);
+  range.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") { e.preventDefault(); apply(+range.value - 1, true); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); apply(+range.value + 1, true); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); apply(+range.value - 10, true); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); apply(+range.value + 10, true); }
+  });
+  range.addEventListener("pointerdown", () => { volumeEditing++; });
+  range.addEventListener("pointerup", () => { volumeEditing = Math.max(0, volumeEditing - 1); });
+  range.addEventListener("pointercancel", () => { volumeEditing = Math.max(0, volumeEditing - 1); });
+  muteBtn.onclick = () => onMute();
+
+  el.append(name, range, pct, dec, inc, muteBtn);
+  return el;
+}
+
+function renderVolumeStrips() {
+  if (!layout || volumeEditing > 0) return;
+  const box = document.getElementById("volumeStrips");
+  box.innerHTML = "";
+  if (layout.playback_enabled) {
+    box.appendChild(volumeStrip({
+      label: "Playback level",
+      value: layout.playback_gain ?? 100,
+      muted: layout.playback_muted,
+      min: 0, max: 150,
+      onSet: v => queueVolume("playback-gain", () =>
+        api("/api/playback-gain", {percent: v}).catch(alert)),
+      onMute: () => api("/api/playback-gain", {mute: !layout.playback_muted})
+        .then(refreshLayout).catch(alert),
+    }));
+    if (layout.volume_supported) {
+      box.appendChild(volumeStrip({
+        label: "Output device",
+        value: layout.playback_device_volume ?? 100,
+        muted: layout.playback_device_muted,
+        min: 0, max: 150,
+        onSet: v => queueVolume("playback-dev", () =>
+          api("/api/device-volume", {role: "playback", percent: v}).catch(alert)),
+        onMute: () => api("/api/device-mute", {role: "playback", mute: !layout.playback_device_muted})
+          .then(refreshLayout).catch(alert),
+      }));
+    }
+  }
+  if (layout.mic_enabled) {
+    box.appendChild(volumeStrip({
+      label: "Mic level",
+      value: layout.mic_gain ?? 100,
+      muted: layout.mic_muted,
+      min: 0, max: 150,
+      onSet: v => queueVolume("mic-gain", () =>
+        api("/api/mic-gain", {percent: v}).catch(alert)),
+      onMute: () => api("/api/mic-gain", {mute: !layout.mic_muted})
+        .then(refreshLayout).catch(alert),
+    }));
+    if (layout.volume_supported) {
+      box.appendChild(volumeStrip({
+        label: "Input device",
+        value: layout.mic_device_volume ?? 100,
+        muted: layout.mic_device_muted,
+        min: 0, max: 150,
+        onSet: v => queueVolume("mic-dev", () =>
+          api("/api/device-volume", {role: "mic", percent: v}).catch(alert)),
+        onMute: () => api("/api/device-mute", {role: "mic", mute: !layout.mic_device_muted})
+          .then(refreshLayout).catch(alert),
+      }));
+    }
+  }
+}
+
+function renderLayout() {
+  if (!layout) return;
+  document.getElementById("playbackEnabled").checked = layout.playback_enabled;
+  document.getElementById("micEnabled").checked = layout.mic_enabled;
+  document.getElementById("latency").value = layout.latency_ms;
+  fillDeviceSelect(document.getElementById("playbackDevice"), layout.outputs, layout.playback_device);
+  fillDeviceSelect(document.getElementById("micDevice"), layout.inputs, layout.mic_device);
+  renderVolumeStrips();
+}
+
+async function refreshLayout() {
+  layout = await api("/api/state");
+  renderLayout();
+  updateHeaderFromLayout(layout);
+}
+
+async function pollStats() {
+  const now = performance.now();
+  const needStats = !statsInFlight && now - lastStatsPollAt >= statsPollMs;
+  const needPeak = !peaksInFlight && now - lastPeakPollAt >= peakPollMs;
+
+  const jobs = [];
+  if (needStats) {
+    lastStatsPollAt = now;
+    statsInFlight = true;
+    jobs.push(api("/api/stats").then(data => {
+      updateHeader(data);
+      updateStatsPanel(data);
+    }).finally(() => { statsInFlight = false; }));
+  }
+  if (needPeak) {
+    lastPeakPollAt = now;
+    peaksInFlight = true;
+    jobs.push(api("/api/peaks").then(data => {
+      updateStatsPeaks(data);
+    }).finally(() => { peaksInFlight = false; }));
+  }
+  if (jobs.length) await Promise.all(jobs);
+  tickPeakMeters();
+}
+
+function setPollSelect(el, ms) {
+  if (!el || !ms) return;
+  const v = String(ms);
+  if (![...el.options].some(o => o.value === v)) {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = ms >= 1000 ? (ms / 1000) + "s" : ms + "ms";
+    el.appendChild(opt);
+  }
+  el.value = v;
+}
+
+function readPollPrefs() {
+  statsPollMs = +document.getElementById("statsPollMs").value;
+  peakPollMs = +document.getElementById("peakPollMs").value;
+  try {
+    localStorage.setItem("ears_client_stats_poll_ms", String(statsPollMs));
+    localStorage.setItem("ears_client_peak_poll_ms", String(peakPollMs));
+  } catch (_) {}
+}
+
+function restartPollTimer() {
+  if (pollTimer) clearInterval(pollTimer);
+  lastStatsPollAt = 0;
+  lastPeakPollAt = 0;
+  const tickMs = Math.max(5, Math.min(statsPollMs, peakPollMs));
+  pollTimer = setInterval(() => pollStats().catch(() => {}), tickMs);
+}
+
+function restartLayoutPoll() {
+  if (layoutPollTimer) clearInterval(layoutPollTimer);
+  layoutPollMs = layout?.web?.layout_poll_ms ?? layoutPollMs;
+  layoutPollTimer = setInterval(() => refreshLayout().catch(() => {}), layoutPollMs);
+}
+
+function initPollPrefs() {
+  const web = layout?.web;
+  try {
+    const savedStats = localStorage.getItem("ears_client_stats_poll_ms");
+    const savedPeak = localStorage.getItem("ears_client_peak_poll_ms");
+    if (savedStats) setPollSelect(document.getElementById("statsPollMs"), +savedStats);
+    else if (web?.stats_poll_ms) setPollSelect(document.getElementById("statsPollMs"), web.stats_poll_ms);
+    if (savedPeak) setPollSelect(document.getElementById("peakPollMs"), +savedPeak);
+    else if (web?.peak_poll_ms) setPollSelect(document.getElementById("peakPollMs"), web.peak_poll_ms);
+    else if (web?.stats_poll_ms) setPollSelect(document.getElementById("peakPollMs"), Math.min(100, web.stats_poll_ms));
+  } catch (_) {}
+  readPollPrefs();
+  document.getElementById("statsPollMs").onchange = () => { readPollPrefs(); restartPollTimer(); };
+  document.getElementById("peakPollMs").onchange = () => { readPollPrefs(); restartPollTimer(); };
+  restartPollTimer();
+  restartLayoutPoll();
+}
+
+document.getElementById("apply").onclick = () =>
+  api("/api/settings", {
+    playback_enabled: document.getElementById("playbackEnabled").checked,
+    mic_enabled: document.getElementById("micEnabled").checked,
+    playback_device: document.getElementById("playbackDevice").value,
+    mic_device: document.getElementById("micDevice").value,
+    latency_ms: +document.getElementById("latency").value,
+  }).then(refreshLayout).catch(alert);
+
+refreshLayout().then(() => initPollPrefs()).catch(alert);
+</script>
+</body>
+</html>

@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ears Audio Bridge</title>
+<style>
+:root{
+  --bg:#14161a;        /* console chassis */
+  --panel:#1c1f25;     /* channel strip */
+  --line:#2b2f37;
+  --text:#d7dae0;
+  --dim:#7d838d;
+  --vu:#e8a13c;        /* amber VU */
+  --vu-hot:#d0543a;
+  --ok:#7fae6a;
+  font-size:15px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"IBM Plex Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+header{
+  display:flex;align-items:baseline;gap:1rem;
+  padding:1.1rem 1.4rem;border-bottom:1px solid var(--line);
+}
+header h1{font-size:1rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;margin:0}
+.brand{display:flex;align-items:baseline;gap:.45rem;flex-shrink:0}
+.brand .ver{font-size:.62rem;font-weight:400;color:var(--dim);letter-spacing:.04em;text-transform:none}
+header .clients{margin-left:auto;color:var(--dim);font-size:.8rem}
+header .clients b{color:var(--ok)}
+main{max-width:1080px;margin:0 auto;padding:1.4rem}
+section{margin-bottom:2rem}
+.config-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:.6rem;
+  align-items:start;margin-bottom:2rem;
+}
+.config-row section{margin-bottom:0}
+.config-row .capture{flex-wrap:nowrap}
+.config-row .capture select{flex:1 1 auto;min-width:0}
+h2{
+  font-size:.72rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.45rem;
+}
+.strip{
+  display:flex;align-items:center;gap:.9rem;
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:.65rem .9rem;margin-bottom:.5rem;
+}
+.strip .name{flex:1 1 40%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem}
+.strip .name .tag{color:var(--vu);font-size:.68rem;margin-left:.5rem;letter-spacing:.1em}
+.strip input[type=range]{flex:1 1 45%;accent-color:var(--vu);height:4px}
+.strip .pct{width:3.2em;text-align:right;font-size:.8rem;color:var(--dim)}
+.strip button.mute{
+  font:inherit;font-size:.68rem;letter-spacing:.12em;
+  background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);padding:.3rem .55rem;cursor:pointer;
+}
+.strip button.step{
+  font:inherit;font-size:.78rem;letter-spacing:.06em;
+  background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);padding:.25rem .45rem;cursor:pointer;line-height:1;
+}
+.strip button.mute.on{border-color:var(--vu-hot);color:var(--vu-hot)}
+.mixer-sub{
+  font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 .55rem;
+}
+.levels-groups{
+  display:flex;flex-direction:row;flex-wrap:nowrap;gap:.6rem;align-items:stretch;
+  overflow-x:auto;padding-bottom:.25rem;
+}
+.levels-group{
+  flex:0 0 auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:.55rem .6rem .5rem;display:flex;flex-direction:column;
+}
+.levels-group-title{
+  font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 .5rem;
+}
+.levels-grid{
+  display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;
+  gap:.5rem;
+}
+.channel.stat{
+  --fader-h:7.5rem;
+  --fader-w:1.75rem;
+  --ctrl-w:3.4rem;
+  flex:0 0 auto;width:auto;padding:.55rem .45rem .5rem;
+}
+.channel.playback{border-color:#3a3428}
+.channel-right{
+  display:grid;
+  grid-template-columns:auto auto;
+  column-gap:0;row-gap:.2rem;
+  min-width:var(--ctrl-w);
+}
+.channel-fader-row{
+  grid-column:1 / -1;
+  display:flex;flex-direction:row;align-items:flex-end;gap:0;
+}
+.channel-label{
+  flex:0 0 auto;
+  height:var(--fader-h);
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-size:.6rem;line-height:1.1;letter-spacing:.03em;
+  color:var(--text);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  max-width:1.15rem;padding:0;margin:0;
+}
+.channel-fader-col{
+  display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;
+  flex:0 0 auto;width:var(--fader-w);
+}
+.channel-pct{
+  font-size:.65rem;color:var(--dim);line-height:1;text-align:center;
+  width:100%;
+}
+.channel-fader{
+  flex:0 0 var(--fader-w);
+  -webkit-appearance:slider-vertical;appearance:slider-vertical;
+  width:var(--fader-w);height:var(--fader-h);accent-color:var(--vu);cursor:pointer;
+  margin:0;padding:0;
+}
+.channel-controls{
+  grid-column:2;
+  display:flex;flex-direction:column;gap:.22rem;
+  min-width:var(--ctrl-w);
+}
+.channel-tag{
+  display:block;margin-top:.3rem;font-size:.54rem;letter-spacing:.08em;color:var(--vu);
+}
+.channel-steps{display:flex;flex-direction:row;gap:.22rem;width:100%}
+.channel-steps button.step{
+  flex:1 1 0;min-width:0;font-size:.72rem;padding:.22rem .25rem;
+  font:inherit;background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);cursor:pointer;line-height:1;
+}
+.channel-mute{
+  font:inherit;font-size:.58rem;letter-spacing:.06em;
+  background:none;border:1px solid var(--line);border-radius:3px;
+  color:var(--dim);padding:.24rem .15rem;cursor:pointer;
+  width:100%;text-align:center;
+}
+.channel-mute.on{border-color:var(--vu-hot);color:var(--vu-hot)}
+#bitrateSelect{min-width:0;width:5rem;padding-left:.35rem;padding-right:.35rem}
+.capture{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+select{
+  font:inherit;font-size:.82rem;background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:4px;padding:.45rem .6rem;min-width:16rem;max-width:100%;
+}
+button.apply{
+  font:inherit;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;
+  background:var(--vu);color:#14161a;border:none;border-radius:4px;
+  padding:.5rem .95rem;cursor:pointer;font-weight:600;
+}
+button.apply:focus-visible,select:focus-visible,input:focus-visible,button.mute:focus-visible{
+  outline:2px solid var(--vu);outline-offset:2px;
+}
+.note{color:var(--dim);font-size:.68rem;margin-top:.5rem;line-height:1.35}
+.stats-controls{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.stats-controls label{font-size:.78rem;color:var(--dim)}
+.stats-controls select{min-width:7rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem}
+.stat{
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:.75rem .9rem;
+}
+.stat h3{font-size:.68rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 .55rem}
+.stat .row{display:flex;justify-content:space-between;gap:.8rem;font-size:.78rem;margin:.2rem 0}
+.stat .row span:last-child{color:var(--text);text-align:right}
+.stat .row span:first-child{color:var(--dim)}
+.stat .stat-hr{border:none;border-top:1px solid var(--line);margin:.55rem 0}
+.stat .stat-section{font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:.15rem 0 .35rem}
+.vu{height:6px;background:#0f1114;border-radius:3px;overflow:hidden}
+.vu > i{display:block;height:100%;background:var(--vu);width:0%;transition:width .04s linear}
+.vu.hot > i{background:var(--vu-hot)}
+.stat .level-hr{border:none;border-top:1px solid var(--line);margin:.55rem 0 .45rem}
+.stat .level-label{font-size:.68rem;color:var(--dim);margin-bottom:.25rem;letter-spacing:.08em;text-transform:uppercase}
+.peak-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.1rem}
+.peak-row .vu{flex:1 1 auto;min-width:0}
+.peak-row .level-pct{
+  flex:0 0 3.2em;font-size:.78rem;color:var(--dim);text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.stat-rows .level-hr{margin:.55rem 0 .45rem}
+.client-stats{margin-top:.55rem;padding-top:.55rem;border-top:1px solid var(--line);font-size:.72rem;color:var(--dim)}
+.client-stats div{margin:.15rem 0}
+@media (max-width:640px){
+  .strip{flex-wrap:wrap}
+  .strip .name{flex-basis:100%}
+  .config-row{grid-template-columns:1fr}
+  .levels-groups{flex-direction:column;overflow-x:visible}
+  .levels-group{width:100%;min-width:0}
+  .levels-grid{overflow-x:auto;padding-bottom:.15rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Ears Audio Bridge</h1>
+    <span class="ver" id="appVersion"></span>
+  </div>
+  <span class="clients" id="backend"></span>
+  <span class="clients"><b id="clients">0</b> client(s) connected</span>
+  <span class="clients" id="wireTotal"></span>
+</header>
+<main>
+  <div class="config-row">
+    <section>
+      <h2>Stream source</h2>
+      <div class="capture">
+        <select id="captureSelect" aria-label="Capture source"></select>
+        <button class="apply" id="captureApply">Apply</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Compression</h2>
+      <div class="capture">
+        <select id="codecSelect" aria-label="Compression codec">
+          <option value="none">None (PCM)</option>
+          <option value="opus">Opus (lossy)</option>
+          <option value="flac">FLAC (lossless)</option>
+        </select>
+        <select id="bitrateSelect" aria-label="Opus bitrate"></select>
+        <button class="apply" id="compressionApply">Apply</button>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Levels</h2>
+    <div class="levels-groups">
+      <div class="levels-group">
+        <h3 class="levels-group-title">General</h3>
+        <div class="levels-grid" id="levelsGeneral"></div>
+      </div>
+      <div class="levels-group">
+        <h3 class="levels-group-title">Output</h3>
+        <div class="levels-grid" id="levelsOutput"></div>
+      </div>
+      <div class="levels-group">
+        <h3 class="levels-group-title">Input</h3>
+        <div class="levels-grid" id="levelsInput"></div>
+      </div>
+    </div>
+    <p class="note">Remote playback controls the level sent to all connected clients. Host sink/source faders only change local PipeWire volume and do not affect the remote stream.</p>
+  </section>
+
+  <section>
+    <h2>Stream stats</h2>
+    <div class="capture stats-controls">
+      <label for="statsPollMs">Stats updates</label>
+      <select id="statsPollMs" aria-label="Stats update interval">
+        <option value="1000">1s</option>
+        <option value="500">500ms</option>
+        <option value="250" selected>250ms</option>
+        <option value="150">150ms</option>
+      </select>
+      <label for="peakPollMs">Peak updates</label>
+      <select id="peakPollMs" aria-label="Peak meter update interval">
+        <option value="1000">1s</option>
+        <option value="500">500ms</option>
+        <option value="250">250ms</option>
+        <option value="100" selected>100ms</option>
+        <option value="50">50ms</option>
+        <option value="10">10ms</option>
+        <option value="5">5ms</option>
+      </select>
+    </div>
+    <div class="stats-grid" id="stats"></div>
+  </section>
+</main>
+
+<script>
+let layout = null;
+let activeCompression = { codec: "none", bitrate: 96 };
+let volumeEditing = 0;
+let streamGainEditing = 0;
+let compressionEditing = 0;
+const volumeTimers = new Map();
+let streamGainTimer;
+
+const statCards = {
+  capture: null,
+  mic: null,
+  clients: new Map(),
+  clocks: new Map(),
+  emptyNote: null,
+};
+
+let statsPollMs = 250;
+let peakPollMs = 100;
+let layoutPollMs = 2000;
+let lastStatsPollAt = 0;
+let lastPeakPollAt = 0;
+let pollTimer = null;
+let layoutPollTimer = null;
+let statsInFlight = false;
+let peaksInFlight = false;
+const peakMeter = new Map();
+
+function setPeakSample(key, rawPeak) {
+  peakMeter.set(key, pctLevel(rawPeak ?? 0));
+}
+
+function paintPeak(card, key) {
+  if (!card?.vu) return;
+  const pct = Math.round(peakMeter.get(key) ?? 0);
+  card.vu.className = "vu" + (pct > 85 ? " hot" : "");
+  card.fill.style.width = pct + "%";
+  if (card.peakPct) card.peakPct.textContent = pct + "%";
+}
+
+function updateCardPeak(card, rawPeak, key) {
+  setPeakSample(key, rawPeak);
+  paintPeak(card, key);
+}
+
+function tickPeakMeters() {
+  if (statCards.capture) paintPeak(statCards.capture, "capture");
+  if (statCards.mic) paintPeak(statCards.mic, "mic");
+  for (const [addr, card] of statCards.clients) {
+    paintPeak(card, "client:" + addr);
+  }
+}
+
+async function api(path, body) {
+  const opts = body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {};
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+function queueStreamGain(percent) {
+  clearTimeout(streamGainTimer);
+  streamGainTimer = setTimeout(() => {
+    api("/api/stream-gain", {percent: +percent}).catch(alert);
+  }, 40);
+}
+
+function queueVolume(kind, name, percent) {
+  const key = kind + ":" + name;
+  clearTimeout(volumeTimers.get(key));
+  volumeTimers.set(key, setTimeout(() => {
+    api("/api/volume", {kind, name, percent: +percent}).catch(alert);
+  }, 40));
+}
+
+function pctLevel(v) {
+  return Math.min(100, Math.round((v / 32767) * 100));
+}
+
+function formatBytes(n) {
+  if (!n) return "0 B";
+  if (n >= 1<<30) return (n/(1<<30)).toFixed(2) + " GiB";
+  if (n >= 1<<20) return (n/(1<<20)).toFixed(2) + " MiB";
+  if (n >= 1<<10) return (n/(1<<10)).toFixed(1) + " KiB";
+  return n + " B";
+}
+
+function formatCPU(pct) {
+  const v = Math.max(0, pct ?? 0);
+  const [intPart, decPart] = v.toFixed(1).split(".");
+  return intPart.padStart(3, "\u00a0") + "." + decPart + "%";
+}
+
+function formatMB(n) {
+  const mb = (n || 0) / (1<<20);
+  const [intPart, decPart] = mb.toFixed(2).split(".");
+  return intPart.padStart(3, "\u00a0") + "." + decPart + " MB";
+}
+
+function codecLine(role, codec, bitrate) {
+  if (!codec || codec === "none") return `${role}: PCM`;
+  if (codec === "opus") return `${role}: opus @ ${bitrate} kbit/s`;
+  if (codec === "flac") return `${role}: flac lossless`;
+  return `${role}: ${codec}`;
+}
+
+function compressionLine(snap, codec) {
+  if (!codec || codec === "none") return "none";
+  const saving = snap?.compression_saving_pct ?? ((1 - (snap?.compression_ratio ?? 1)) * 100);
+  if (codec === "flac") {
+    if (saving <= 0.5) return "minimal savings on this content";
+    return `${saving.toFixed(0)}% smaller`;
+  }
+  if (saving <= 0.5) return "minimal savings";
+  return `${saving.toFixed(0)}% smaller`;
+}
+
+function wireLine(snap) {
+  const ratio = snap?.compression_ratio ?? 1;
+  const wirePct = (ratio * 100).toFixed(0);
+  const session = snap?.cumulative_ratio > 0
+    ? ` | session ${(snap.cumulative_ratio * 100).toFixed(0)}%`
+    : "";
+  return `${wirePct}%${session}`;
+}
+
+function formatLatency(ms) {
+  if (ms == null || ms <= 0) return "—";
+  return `${ms} ms`;
+}
+
+function formatNetTiming(net, field) {
+  const timing = net?.netTiming;
+  if (!timing || !timing.samples) return "";
+  const ms = field === "jitter"
+    ? (timing.jitterMs ?? timing.jitter_ms)
+    : (timing.latencyMs ?? timing.latency_ms);
+  if (ms == null || ms < 0) return "";
+  return ms.toFixed(1) + " ms";
+}
+
+function formatWallNS(ns) {
+  if (!ns) return "";
+  try {
+    return new Date(ns / 1e6).toLocaleString(undefined, { hour12: false });
+  } catch {
+    return "";
+  }
+}
+
+function formatClockOffset(ms) {
+  if (ms == null || !Number.isFinite(ms)) return "";
+  const sign = ms >= 0 ? "+" : "";
+  const ahead = ms >= 0 ? "ahead" : "behind";
+  return `${sign}${ms.toFixed(1)} ms (server ${ahead})`;
+}
+
+function formatClockRTT(ms) {
+  if (ms == null || !Number.isFinite(ms) || ms <= 0) return "";
+  return ms.toFixed(1) + " ms";
+}
+
+function updateClockCard(card, clock) {
+  if (!clock?.synced) {
+    setRow(card, "clitime", "CLIENT TIME", "—");
+    setRow(card, "srvtime", "SERVER TIME", "—");
+    setRow(card, "clockoff", "CLOCK OFFSET", "—");
+    setRow(card, "clockrtt", "SYNC RTT", "—");
+    return;
+  }
+  setRow(card, "clitime", "CLIENT TIME",
+    formatWallNS(clock.client_time_ns ?? clock.clientTimeNS) || "—");
+  setRow(card, "srvtime", "SERVER TIME",
+    formatWallNS(clock.server_time_ns ?? clock.serverTimeNS) || "—");
+  setRow(card, "clockoff", "CLOCK OFFSET",
+    formatClockOffset(clock.offset_ms ?? clock.offsetMs) || "—");
+  setRow(card, "clockrtt", "SYNC RTT",
+    formatClockRTT(clock.rtt_ms ?? clock.rttMs) || "—");
+}
+
+function syncClientClockCards(clients) {
+  const grid = document.getElementById("stats");
+  const seen = new Set();
+  let anchor = streamStatsAnchor();
+  for (const c of clients || []) {
+    seen.add(c.addr);
+    let card = statCards.clocks.get(c.addr);
+    if (!card) {
+      card = makeRowCard("Clock sync", false);
+      statCards.clocks.set(c.addr, card);
+    }
+    card.h.textContent = "Clock · " + c.addr;
+    updateClockCard(card, c.clock);
+    if (anchor) anchor.after(card.el);
+    else grid.prepend(card.el);
+    anchor = card.el;
+  }
+  for (const [addr, card] of statCards.clocks) {
+    if (!seen.has(addr)) {
+      card.el.remove();
+      statCards.clocks.delete(addr);
+    }
+  }
+}
+
+function streamStatsAnchor() {
+  if (statCards.mic) return statCards.mic.el;
+  if (statCards.capture) return statCards.capture.el;
+  return null;
+}
+
+function clientCardsAnchor() {
+  let last = null;
+  for (const card of statCards.clocks.values()) last = card.el;
+  if (last) return last;
+  return streamStatsAnchor();
+}
+
+function formatDuration(sec) {
+  if (!sec || sec <= 0) return "—";
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+function setSectionLabel(card, key, text) {
+  if (!text) {
+    if (card.rowEls[key]) card.rowEls[key].remove();
+    delete card.rowEls[key];
+    return;
+  }
+  let el = card.rowEls[key];
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "stat-section";
+    card.rows.appendChild(el);
+    card.rowEls[key] = el;
+  }
+  el.textContent = text;
+}
+
+function setSectionHr(card, key) {
+  if (card.rowEls[key]) return;
+  const hr = document.createElement("hr");
+  hr.className = "stat-hr";
+  card.rows.appendChild(hr);
+  card.rowEls[key] = hr;
+}
+
+function makeRowCard(title, withLevel) {
+  const el = document.createElement("div");
+  el.className = "stat";
+  const h = document.createElement("h3");
+  h.textContent = title;
+  const rows = document.createElement("div");
+  rows.className = "stat-rows";
+  el.append(h, rows);
+  const card = {el, h, rows, rowEls: {}, extra: null, hasPeak: withLevel, peakBlock: null,
+    vu: null, fill: null, peakPct: null};
+  return card;
+}
+
+function layoutPeakSection(card) {
+  if (!card.hasPeak) return;
+  if (!card.peakBlock) {
+    const hr = document.createElement("hr");
+    hr.className = "level-hr";
+    const label = document.createElement("div");
+    label.className = "level-label";
+    label.textContent = "Peak";
+    const vu = document.createElement("div");
+    vu.className = "vu";
+    const fill = document.createElement("i");
+    vu.appendChild(fill);
+    const peakPct = document.createElement("div");
+    peakPct.className = "level-pct";
+    peakPct.textContent = "0%";
+    const peakRow = document.createElement("div");
+    peakRow.className = "peak-row";
+    peakRow.append(vu, peakPct);
+    card.peakBlock = {hr, label, peakRow, vu, fill, peakPct};
+    card.vu = vu;
+    card.fill = fill;
+    card.peakPct = peakPct;
+  }
+  const pb = card.peakBlock;
+  const nodes = [pb.hr, pb.label, pb.peakRow];
+  const anchor = card.rowEls._netHr || card.rowEls._netlabel || null;
+  for (const node of nodes) {
+    if (anchor && anchor.parentNode === card.rows) card.rows.insertBefore(node, anchor);
+    else card.rows.appendChild(node);
+  }
+}
+
+function setRow(card, key, label, value) {
+  if (value === "") {
+    if (card.rowEls[key]) card.rowEls[key].remove();
+    delete card.rowEls[key];
+    return;
+  }
+  let row = card.rowEls[key];
+  if (!row) {
+    row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = "<span></span><span></span>";
+    card.rows.appendChild(row);
+    card.rowEls[key] = row;
+  }
+  row.children[0].textContent = label;
+  row.children[1].textContent = value;
+}
+
+function updateStreamCardStats(card, snap, opts) {
+  if (!snap) return;
+  const role = opts?.role || "Encode";
+  const codec = opts?.codec ?? activeCompression.codec;
+  const bitrate = opts?.bitrate ?? activeCompression.bitrate;
+  const net = opts?.net || {};
+
+  // —— Media ——
+  setSectionLabel(card, "_medialabel", "Media");
+  setRow(card, "format", "Format", opts?.format || "");
+  setRow(card, "fps", "Frame rate", snap.frames_per_sec.toFixed(1) + " fps");
+  setRow(card, "rms", "RMS", pctLevel(snap.rms) + "%");
+  setRow(card, "codec", "Codec", codecLine(role, codec, bitrate));
+  setRow(card, "compsav", "Compression", compressionLine(snap, codec));
+  setRow(card, "wirepct", "Wire", wireLine(snap));
+  layoutPeakSection(card);
+
+  setSectionHr(card, "_netHr");
+  setSectionLabel(card, "_netlabel", "Network");
+
+  // —— Network ——
+  setRow(card, "endpoint", "IP", opts?.endpoint || "");
+  setRow(card, "bw", "Wire bandwidth", snap.bandwidth_kbps.toFixed(0) + " kbit/s");
+  setRow(card, "pcmbw", "PCM bandwidth", snap.pcm_bandwidth_kbps.toFixed(0) + " kbit/s");
+  setRow(card, "totalbw", "Total bandwidth", (snap.session_bandwidth_kbps ?? 0).toFixed(0) + " kbit/s");
+  setRow(card, "egress", "Total egress", net.totalEgressKbps != null
+    ? net.totalEgressKbps.toFixed(0) + " kbit/s" : "");
+  setRow(card, "clients", "Clients", net.clientCount != null ? String(net.clientCount) : "");
+  setRow(card, "framems", "Frame size", net.wireFrameMs != null ? net.wireFrameMs + " ms" : "");
+  setRow(card, "lat", "Buffer latency", formatLatency(opts?.latencyMs));
+  setRow(card, "netlat", "Network latency", formatNetTiming(net, "latency"));
+  setRow(card, "netjit", "Jitter", formatNetTiming(net, "jitter"));
+  setRow(card, "queue", "Send queue", net.queueDepth != null ? String(net.queueDepth) : "");
+  setRow(card, "queuemax", "Queue peak", net.queuePeak != null ? String(net.queuePeak) : "");
+  setRow(card, "connected", "Connected", net.connectedSec != null ? formatDuration(net.connectedSec) : "");
+  setRow(card, "micrx", "Mic received", net.sendsMic || net.micBytesRx > 0
+    ? formatBytes(net.micBytesRx || 0) : "");
+  setRow(card, "frames", "Frames", String(snap.frames ?? 0));
+  setRow(card, "drop", "Dropped", String(snap.dropped));
+  setRow(card, "wire", "Wire total", snap.total_wire || formatBytes(snap.wire_bytes));
+  setRow(card, "pcm", "PCM total", snap.total_pcm || "");
+
+  const extra = opts?.extra;
+  if (extra) {
+    if (!card.extra) {
+      card.extra = document.createElement("div");
+      card.extra.className = "client-stats";
+      card.el.appendChild(card.extra);
+    }
+    card.extra.textContent = extra;
+  } else if (card.extra) {
+    card.extra.remove();
+    card.extra = null;
+  }
+}
+
+function syncClientCards(clients, streamMeta) {
+  const { codec, bitrate } = activeCompression;
+  const seen = new Set();
+  for (const c of clients || []) {
+    seen.add(c.addr);
+    let card = statCards.clients.get(c.addr);
+    if (!card) {
+      card = makeRowCard("Client tx", true);
+      statCards.clients.set(c.addr, card);
+      const anchor = clientCardsAnchor();
+      if (anchor) anchor.after(card.el);
+      else document.getElementById("stats").appendChild(card.el);
+    }
+    updateStreamCardStats(card, c.stream, {
+      role: "Decode",
+      codec,
+      bitrate,
+      format: streamMeta?.streamFormat || "",
+      endpoint: c.addr,
+      latencyMs: c.latency_ms,
+      net: {
+        queueDepth: c.queue_depth,
+        queuePeak: c.queue_peak,
+        connectedSec: c.connected_sec,
+        micBytesRx: c.mic_bytes_rx,
+        sendsMic: c.sends_mic,
+        wireFrameMs: streamMeta?.wireFrameMs,
+        netTiming: c.mic_net,
+      },
+      extra: c.audio ? null : "not receiving audio",
+    });
+  }
+  for (const [addr, card] of statCards.clients) {
+    if (!seen.has(addr)) {
+      card.el.remove();
+      statCards.clients.delete(addr);
+      peakMeter.delete("client:" + addr);
+    }
+  }
+}
+
+function updateStatsPeaks(data) {
+  const peaks = data.peaks;
+  if (!peaks) return;
+  if (statCards.capture) updateCardPeak(statCards.capture, peaks.capture?.peak, "capture");
+  if (statCards.mic) updateCardPeak(statCards.mic, peaks.mic?.peak, "mic");
+  syncClientPeaks(peaks.clients);
+}
+
+function syncClientPeaks(clients) {
+  for (const c of clients || []) {
+    const card = statCards.clients.get(c.addr);
+    if (card && c.audio) updateCardPeak(card, c.peak, "client:" + c.addr);
+  }
+}
+
+function updateStatsPanel(data) {
+  const st = data.stats;
+  if (!st) return;
+
+  activeCompression = {
+    codec: data.compression?.codec || "none",
+    bitrate: data.compression?.bitrate_kbps || 96,
+  };
+  const codec = activeCompression.codec;
+  const bitrate = activeCompression.bitrate;
+
+  if (!statCards.capture) {
+    statCards.capture = makeRowCard("Capture stream", true);
+    document.getElementById("stats").appendChild(statCards.capture.el);
+  }
+  updateStreamCardStats(statCards.capture, st.capture, {
+    role: "Encode",
+    codec,
+    bitrate,
+    format: data.audio_format,
+    endpoint: st.stream_listen || "",
+    latencyMs: st.encode_latency_ms,
+    net: {
+      clientCount: st.client_count,
+      totalEgressKbps: st.total_wire_kbps,
+      wireFrameMs: st.wire_frame_ms,
+    },
+  });
+
+  if (data.mic_enabled) {
+    if (!statCards.mic) {
+      statCards.mic = makeRowCard("Mic return stream", true);
+      statCards.capture.el.after(statCards.mic.el);
+    }
+    updateStreamCardStats(statCards.mic, st.mic, {
+      role: "Mic",
+      codec: "none",
+      format: data.mic_format,
+      endpoint: "server input",
+      latencyMs: 20,
+      net: {
+        wireFrameMs: 20,
+        netTiming: st.mic_net,
+      },
+    });
+    setRow(statCards.mic, "codec", "Codec", "Mic: raw PCM");
+    setRow(statCards.mic, "compsav", "Compression", "none");
+    setRow(statCards.mic, "wirepct", "Wire", "100%");
+  } else if (statCards.mic) {
+    statCards.mic.el.remove();
+    statCards.mic = null;
+  }
+
+  syncClientClockCards(st.clients || []);
+  syncClientCards(st.clients, {
+    wireFrameMs: st.wire_frame_ms,
+    streamFormat: data.audio_format,
+    micFormat: data.mic_enabled ? data.mic_format : "",
+  });
+
+  if (!st.clients?.length) {
+    if (!statCards.emptyNote) {
+      statCards.emptyNote = document.createElement("p");
+      statCards.emptyNote.className = "note";
+      statCards.emptyNote.textContent = "No clients connected — stream stats update when a client joins.";
+      document.getElementById("stats").appendChild(statCards.emptyNote);
+    }
+  } else if (statCards.emptyNote) {
+    statCards.emptyNote.remove();
+    statCards.emptyNote = null;
+  }
+}
+
+function updateHeader(data) {
+  const clients = data.clients ?? data.stats?.client_count ?? 0;
+  document.getElementById("clients").textContent = clients;
+  const totalWire = data.stats?.total_wire_kbps || 0;
+  document.getElementById("wireTotal").innerHTML =
+    `egress <b>${totalWire.toFixed(0)}</b> kbit/s`;
+
+  const proc = data.stats?.process;
+  const backend = layout?.backend || data.backend || "";
+  let backendText = backend ? `${backend} backend` : "";
+  if (proc) {
+    backendText += ` | CPU: ${formatCPU(proc.cpu_percent)} | RAM: ${formatMB(proc.rss_bytes)}`;
+  }
+  document.getElementById("backend").textContent = backendText;
+}
+
+function bindVolumeRange(range, pct, min, max, onSet, vertical) {
+  function apply(v, fromUser) {
+    v = Math.max(min, Math.min(max, Math.round(v)));
+    range.value = v;
+    pct.textContent = v + "%";
+    if (fromUser) onSet(v);
+  }
+  range.oninput = () => apply(+range.value, true);
+  range.addEventListener("keydown", e => {
+    if (vertical) {
+      if (e.key === "ArrowDown") { e.preventDefault(); apply(+range.value - 1, true); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); apply(+range.value + 1, true); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); apply(+range.value - 10, true); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); apply(+range.value + 10, true); }
+    } else {
+      if (e.key === "ArrowLeft") { e.preventDefault(); apply(+range.value - 1, true); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); apply(+range.value + 1, true); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); apply(+range.value - 10, true); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); apply(+range.value + 10, true); }
+    }
+  });
+  return apply;
+}
+
+function volumeStepButtons(range, apply) {
+  const dec = document.createElement("button");
+  dec.type = "button";
+  dec.className = "step";
+  dec.textContent = "‹";
+  dec.onclick = () => apply(+range.value - 1, true);
+  const inc = document.createElement("button");
+  inc.type = "button";
+  inc.className = "step";
+  inc.textContent = "›";
+  inc.onclick = () => apply(+range.value + 1, true);
+  return [dec, inc];
+}
+
+function channelFader(kind, dev, special) {
+  const vol = layout.volume_supported;
+  const el = document.createElement("div");
+  el.className = "stat channel" + (kind === "stream" ? " playback" : "");
+
+  const right = document.createElement("div");
+  right.className = "channel-right";
+
+  const faderRow = document.createElement("div");
+  faderRow.className = "channel-fader-row";
+
+  const faderCol = document.createElement("div");
+  faderCol.className = "channel-fader-col";
+
+  const label = document.createElement("div");
+  label.className = "channel-label";
+  const labelText = kind === "stream"
+    ? "Remote playback"
+    : (dev.description || dev.name);
+  label.textContent = labelText;
+  label.title = kind === "stream" ? labelText : (dev.description ? `${dev.description} (${dev.name})` : dev.name);
+  if (special) {
+    const tag = document.createElement("span");
+    tag.className = "channel-tag";
+    tag.textContent = special;
+    label.appendChild(tag);
+  }
+
+  const controls = document.createElement("div");
+  controls.className = "channel-controls";
+
+  const pct = document.createElement("span");
+  pct.className = "channel-pct";
+  const range = document.createElement("input");
+  range.type = "range";
+  range.className = "channel-fader";
+  range.min = 0;
+  range.max = 150;
+  range.value = kind === "stream" ? (layout.stream_gain ?? 100) : dev.volume;
+  range.setAttribute("aria-label", kind === "stream" ? "Remote playback level" : `${dev.name} volume`);
+
+  const apply = bindVolumeRange(range, pct, 0, 150, v => {
+    if (kind === "stream") queueStreamGain(v);
+    else queueVolume(kind, dev.name, v);
+  }, true);
+
+  const steps = document.createElement("div");
+  steps.className = "channel-steps";
+  const [dec, inc] = volumeStepButtons(range, apply);
+  steps.append(dec, inc);
+
+  const mute = document.createElement("button");
+  mute.type = "button";
+  if (kind === "stream") {
+    mute.className = "mute channel-mute" + (layout.stream_muted ? " on" : "");
+    mute.textContent = layout.stream_muted ? "MUTED" : "MUTE";
+    mute.onclick = () =>
+      api("/api/stream-gain", {mute: !layout.stream_muted}).then(refreshLayout).catch(alert);
+  } else {
+    mute.className = "mute channel-mute" + (dev.muted ? " on" : "");
+    mute.textContent = dev.muted ? "MUTED" : "MUTE";
+    mute.onclick = () =>
+      api("/api/mute", {kind, name: dev.name, mute: !dev.muted}).then(refreshLayout).catch(alert);
+  }
+
+  pct.textContent = range.value + "%";
+
+  if (kind === "stream") {
+    range.addEventListener("pointerdown", () => { streamGainEditing++; });
+    range.addEventListener("pointerup", () => { streamGainEditing = Math.max(0, streamGainEditing - 1); });
+    range.addEventListener("pointercancel", () => { streamGainEditing = Math.max(0, streamGainEditing - 1); });
+  } else if (vol) {
+    range.addEventListener("pointerdown", () => { volumeEditing++; });
+    range.addEventListener("pointerup", () => { volumeEditing = Math.max(0, volumeEditing - 1); });
+    range.addEventListener("pointercancel", () => { volumeEditing = Math.max(0, volumeEditing - 1); });
+  }
+
+  if (kind === "stream" || vol) {
+    controls.append(steps, mute);
+    faderCol.append(pct, range);
+    faderRow.append(label, faderCol);
+    right.append(faderRow, controls);
+    el.append(right);
+  } else {
+    faderRow.append(label);
+    right.append(faderRow);
+    el.append(right);
+  }
+  return el;
+}
+
+function streamGainStrip() {
+  return channelFader("stream", {}, null);
+}
+
+function strip(kind, dev, special) {
+  return channelFader(kind, dev, special);
+}
+
+function renderCompression() {
+  if (!layout?.compression || compressionEditing > 0) return;
+  const codec = document.getElementById("codecSelect");
+  const br = document.getElementById("bitrateSelect");
+  codec.value = layout.compression.codec || "none";
+  const prev = br.value;
+  br.innerHTML = "";
+  for (const kbps of layout.compression.bitrate_choices || []) {
+    const o = document.createElement("option");
+    o.value = o.textContent = String(kbps);
+    br.appendChild(o);
+  }
+  br.value = prev || String(layout.compression.bitrate_kbps || 96);
+  br.disabled = codec.value !== "opus";
+}
+
+function renderLayout() {
+  if (layout.version) document.getElementById("appVersion").textContent = layout.version;
+  updateHeaderFromLayout(layout);
+  renderCompression();
+
+  if (streamGainEditing === 0 && volumeEditing === 0) {
+    const general = document.getElementById("levelsGeneral");
+    const output = document.getElementById("levelsOutput");
+    const input = document.getElementById("levelsInput");
+    general.innerHTML = "";
+    output.innerHTML = "";
+    input.innerHTML = "";
+    general.appendChild(streamGainStrip());
+    for (const d of layout.sinks)
+      output.appendChild(strip("sink", d, d.name === layout.output_sink ? "EARS OUT" : null));
+    for (const d of layout.sources)
+      input.appendChild(strip("source", d,
+        d.name === layout.mic_source ? "EARS MIC" :
+        isStreamingSource(d.name, layout.capture_source) ? "STREAMING" : null));
+  }
+
+  if (volumeEditing > 0) return;
+
+  const sel = document.getElementById("captureSelect");
+  const prev = sel.value;
+  const want = layout.capture_source;
+  sel.innerHTML = "";
+  const targets = [...(layout.capture_targets || [])];
+  if (want && !targets.includes(want)) targets.unshift(want);
+  for (const name of targets) {
+    const o = document.createElement("option");
+    o.value = o.textContent = name;
+    sel.appendChild(o);
+  }
+  sel.value = want || prev || targets[0] || "";
+}
+
+function isStreamingSource(name, capture) {
+  if (!capture) return false;
+  if (name === capture) return true;
+  if (capture === name + ".monitor") return true;
+  return capture.replace(/\.monitor$/, "") === name;
+}
+
+async function refreshLayout() {
+  layout = await api("/api/state");
+  renderLayout();
+  updateHeaderFromLayout(layout);
+}
+
+function updateHeaderFromLayout(data) {
+  document.getElementById("clients").textContent = data.clients ?? 0;
+  const proc = data.process;
+  const backend = layout?.backend || data.backend || "";
+  let backendText = backend ? `${backend} backend` : "";
+  if (proc) {
+    backendText += ` | CPU: ${formatCPU(proc.cpu_percent)} | RAM: ${formatMB(proc.rss_bytes)}`;
+  }
+  document.getElementById("backend").textContent = backendText;
+}
+
+async function pollStats() {
+  const now = performance.now();
+  const needStats = !statsInFlight && now - lastStatsPollAt >= statsPollMs;
+  const needPeak = !peaksInFlight && now - lastPeakPollAt >= peakPollMs;
+
+  const jobs = [];
+  if (needStats) {
+    lastStatsPollAt = now;
+    statsInFlight = true;
+    jobs.push(api("/api/stats").then(data => {
+      updateHeader(data);
+      updateStatsPanel(data);
+      if (compressionEditing === 0 && layout && data.compression.codec !== layout.compression?.codec) {
+        layout.compression = data.compression;
+        renderCompression();
+      }
+    }).finally(() => { statsInFlight = false; }));
+  }
+  if (needPeak) {
+    lastPeakPollAt = now;
+    peaksInFlight = true;
+    jobs.push(api("/api/peaks").then(data => {
+      updateStatsPeaks(data);
+    }).finally(() => { peaksInFlight = false; }));
+  }
+  if (jobs.length) await Promise.all(jobs);
+  tickPeakMeters();
+}
+
+function setPollSelect(el, ms) {
+  if (!el || !ms) return;
+  const v = String(ms);
+  if (![...el.options].some(o => o.value === v)) {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = ms >= 1000 ? (ms / 1000) + "s" : ms + "ms";
+    el.appendChild(opt);
+  }
+  el.value = v;
+}
+
+function readPollPrefs() {
+  statsPollMs = +document.getElementById("statsPollMs").value;
+  peakPollMs = +document.getElementById("peakPollMs").value;
+  try {
+    localStorage.setItem("ears_stats_poll_ms", String(statsPollMs));
+    localStorage.setItem("ears_peak_poll_ms", String(peakPollMs));
+  } catch (_) {}
+}
+
+function restartPollTimer() {
+  if (pollTimer) clearInterval(pollTimer);
+  lastStatsPollAt = 0;
+  lastPeakPollAt = 0;
+  const tickMs = Math.max(5, Math.min(statsPollMs, peakPollMs));
+  pollTimer = setInterval(() => pollStats().catch(() => {}), tickMs);
+}
+
+function restartLayoutPoll() {
+  if (layoutPollTimer) clearInterval(layoutPollTimer);
+  layoutPollMs = layout?.web?.layout_poll_ms ?? layoutPollMs;
+  layoutPollTimer = setInterval(() => refreshLayout().catch(() => {}), layoutPollMs);
+}
+
+function initPollPrefs() {
+  const web = layout?.web;
+  try {
+    const savedStats = localStorage.getItem("ears_stats_poll_ms");
+    const savedPeak = localStorage.getItem("ears_peak_poll_ms");
+    if (savedStats) setPollSelect(document.getElementById("statsPollMs"), +savedStats);
+    else if (web?.stats_poll_ms) setPollSelect(document.getElementById("statsPollMs"), web.stats_poll_ms);
+    if (savedPeak) setPollSelect(document.getElementById("peakPollMs"), +savedPeak);
+    else if (web?.peak_poll_ms) setPollSelect(document.getElementById("peakPollMs"), web.peak_poll_ms);
+  } catch (_) {}
+  readPollPrefs();
+  document.getElementById("statsPollMs").onchange = () => { readPollPrefs(); restartPollTimer(); };
+  document.getElementById("peakPollMs").onchange = () => { readPollPrefs(); restartPollTimer(); };
+  restartPollTimer();
+  restartLayoutPoll();
+}
+
+document.getElementById("captureApply").onclick = () =>
+  api("/api/capture", {source: document.getElementById("captureSelect").value})
+    .then(refreshLayout).catch(alert);
+
+document.getElementById("codecSelect").onchange = () => {
+  document.getElementById("bitrateSelect").disabled =
+    document.getElementById("codecSelect").value !== "opus";
+};
+
+document.getElementById("compressionApply").onclick = () =>
+  api("/api/compression", {
+    codec: document.getElementById("codecSelect").value,
+    bitrate_kbps: +document.getElementById("bitrateSelect").value,
+  }).then(refreshLayout).catch(alert);
+
+for (const id of ["codecSelect", "bitrateSelect"]) {
+  const el = document.getElementById(id);
+  el.addEventListener("focus", () => { compressionEditing++; });
+  el.addEventListener("blur", () => { compressionEditing = Math.max(0, compressionEditing - 1); });
+}
+
+refreshLayout().then(() => initPollPrefs()).catch(alert);
+</script>
+</body>
+</html>

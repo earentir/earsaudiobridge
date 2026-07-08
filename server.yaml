@@ -1,0 +1,53 @@
+# EarsAudioBridge server configuration
+
+# auto | pipewire | pulse | native
+# auto picks: PipeWire if reachable, else PulseAudio (Linux); native on Windows/macOS
+backend: auto
+
+# TCP port clients connect to for the audio stream.
+# 0.0.0.0 = all interfaces (reachable from other hosts on the LAN).
+listen: "0.0.0.0:4600"
+
+# Embedded web UI — open http://<this-host-ip>:4680 from any machine on the network.
+web:
+  listen: "0.0.0.0:4680"
+  stats_poll_ms: 250   # stats panel refresh (ms)
+  peak_poll_ms: 100    # peak meter refresh (ms)
+  layout_poll_ms: 2000 # sink/source list refresh (ms)
+
+# Virtual output device that appears in the host's sound outputs
+audio:
+  sink_name: earsaudiobridge
+  sink_description: EarsAudioBridge_Output
+  sample_rate: 48000
+  channels: 2
+
+# Return path: client mic appears on the server as an input source
+mic:
+  enabled: true
+  sink_name: earsaudiobridge_mic
+  source_name: earsaudiobridge_mic_src
+  source_description: EarsAudioBridge_Microphone
+  sample_rate: 48000
+  channels: 1
+
+# Native backend only (Windows; the pure-Go build has no macOS server):
+native:
+  # Empty = WASAPI loopback of the default output; or a device name to loopback
+  capture_device: ""
+  # Device the client mic is played into (VB-Cable "CABLE Input")
+  mic_out_device: ""
+
+# Remove the devices/modules this run created when the server exits
+cleanup_on_exit: false
+
+# Outbound stream compression (switchable from the web UI at runtime)
+compression:
+  codec: none        # none | opus | flac
+  bitrate_kbps: 96   # opus level when codec is opus
+
+# Outbound stream level and capture source (also adjustable in the web UI)
+stream:
+  gain_percent: 100   # 0-150 software gain before encode
+  muted: false
+  capture_source: ""  # empty = default sink monitor (earsaudiobridge.monitor)
