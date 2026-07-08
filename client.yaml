@@ -1,0 +1,33 @@
+# EarsAudioBridge client configuration
+
+# Server host:port (the stream port, not the web UI port).
+# Use the server's LAN IP or hostname — 127.0.0.1 only works on the same machine.
+server: "192.168.178.40:4600"
+
+# auto | pulse | native
+# auto picks pulse on Linux (works for PipeWire and PulseAudio hosts),
+# native (WASAPI/CoreAudio) on Windows/macOS
+backend: auto
+
+playback:
+  enabled: true
+  device: ""
+  latency_ms: 60
+  gain_percent: 100
+  muted: false
+
+# Send the local microphone back to the server
+mic:
+  enabled: false
+  device: ""
+  gain_percent: 100
+  muted: false
+
+reconnect_seconds: 3
+
+# Local web UI for stats and settings (localhost only — avoids firewall prompts on Windows)
+web:
+  listen: "127.0.0.1:4680"
+  stats_poll_ms: 250   # stats panel refresh (ms)
+  peak_poll_ms: 100    # peak meter refresh (ms)
+  layout_poll_ms: 2000 # device list refresh (ms)

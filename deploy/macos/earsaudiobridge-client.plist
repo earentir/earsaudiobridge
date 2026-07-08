@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.earentir.earsaudiobridge.client</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/earsaudiobridge-client</string>
+		<string>--config</string>
+		<string>/Users/REPLACE_ME/Library/Application Support/EarsAudioBridge/client.yaml</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Users/REPLACE_ME/Library/Application Support/EarsAudioBridge</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/REPLACE_ME/Library/Logs/EarsAudioBridge/client.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/REPLACE_ME/Library/Logs/EarsAudioBridge/client.log</string>
+</dict>
+</plist>

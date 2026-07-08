@@ -1,0 +1,17 @@
+[Unit]
+Description=EarsAudioBridge client (remote playback + optional mic return)
+Documentation=https://github.com/earentir/audiobridge
+# User unit only — install to ~/.config/systemd/user and use systemctl --user.
+After=pipewire.service pipewire-pulse.service pulseaudio.service sound.target network-online.target
+Wants=pipewire.service network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/earsaudiobridge-client --tray --config %h/.config/earsaudiobridge/client.yaml
+WorkingDirectory=%h/.config/earsaudiobridge
+Restart=on-failure
+RestartSec=3
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

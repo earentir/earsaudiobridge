@@ -1,0 +1,18 @@
+[Unit]
+Description=EarsAudioBridge server (virtual sink + stream)
+Documentation=https://github.com/earentir/audiobridge
+# User unit only — install to ~/.config/systemd/user and use systemctl --user.
+After=pipewire.service pipewire-pulse.service pulseaudio.service sound.target
+Wants=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/earsaudiobridge-server --config %h/.config/earsaudiobridge/server.yaml
+WorkingDirectory=%h/.config/earsaudiobridge
+Restart=on-failure
+RestartSec=3
+# PipeWire / PulseAudio live in the user session — run as a user unit, not system-wide.
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target
