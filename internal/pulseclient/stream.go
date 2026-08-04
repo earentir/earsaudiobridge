@@ -135,38 +135,6 @@ func s16Format() byte {
 	return proto.FormatInt16LE
 }
 
-// playbackBufferBytes is the Pulse playback target buffer size in bytes.
-func playbackBufferBytes(f audio.Format, latencyMS int) int {
-	if latencyMS <= 0 {
-		latencyMS = 20
-	}
-	bytesPerFrame := 2 * f.Channels
-	samples := int(float64(latencyMS) / 1000 * float64(f.Rate))
-	if samples < 1 {
-		samples = 1
-	}
-	return samples * bytesPerFrame
-}
-
-func primePipe(pw *io.PipeWriter, n int) error {
-	if n <= 0 {
-		return nil
-	}
-	const chunk = 4096
-	zeros := make([]byte, chunk)
-	for n > 0 {
-		w := n
-		if w > chunk {
-			w = chunk
-		}
-		if _, err := pw.Write(zeros[:w]); err != nil {
-			return err
-		}
-		n -= w
-	}
-	return nil
-}
-
 type recordCloser struct {
 	client *pulse.Client
 	stream *pulse.RecordStream
@@ -210,23 +178,13 @@ func (w *playbackWriter) Write(p []byte) (int, error) {
 	if err := w.stream.Error(); err != nil {
 		return 0, err
 	}
-	n, err := w.pw.Write(p)
-	if err != nil {
-		return n, err
-	}
+	// Start the Pulse consumer before writing. The pipe is unbuffered, so
+	// writing first then starting deadlocks: Write waits for a reader, and
+	// Start never runs because it was scheduled after Write returns.
 	w.startOnce.Do(func() {
-		go w.startPlayback()
+		go w.stream.Start()
 	})
-	return n, nil
-}
-
-func (w *playbackWriter) startPlayback() {
-	need := w.stream.BufferSizeBytes() * 2
-	if need <= 0 {
-		need = 4096
-	}
-	_ = primePipe(w.pw, need)
-	w.stream.Start()
+	return w.pw.Write(p)
 }
 
 func (w *playbackWriter) Close() error {
