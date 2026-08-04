@@ -172,6 +172,8 @@ func (a *App) runSession(ctx context.Context) error {
 	a.setSessionState(false, true, "")
 	log.Printf("connected to %s", a.cfg.Server)
 
+	a.playbackStats.Reset()
+	a.micStats.Reset()
 	a.mu.Lock()
 	a.clock = proto.ClockView{}
 	a.clockOffsetNS = 0
@@ -288,13 +290,16 @@ func (a *App) runSession(ctx context.Context) error {
 					conn.Close()
 					return
 				}
+				a.applyMicGain(buf)
 				writeMu.Lock()
 				err := proto.WriteFrame(conn, proto.TypeMic, proto.WithSendTime(time.Now(), buf))
 				writeMu.Unlock()
 				if err != nil {
+					if ctx.Err() == nil {
+						log.Printf("mic send ended: %v", err)
+					}
 					return
 				}
-				a.applyMicGain(buf)
 				a.micStats.AddFrame(buf, len(buf))
 			}
 		}()

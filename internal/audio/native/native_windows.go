@@ -249,7 +249,10 @@ func (r *recorder) loop(device string, f audio.Format, loopback bool, stop chan 
 			if frames > 0 {
 				n := int(frames) * block
 				buf := make([]byte, n)
-				copy(buf, unsafe.Slice(data, n))
+				// SILENT packets leave data undefined (often nil); treat as zeros.
+				if flags&wca.AUDCLNT_BUFFERFLAGS_SILENT == 0 && data != nil {
+					copy(buf, unsafe.Slice(data, n))
+				}
 				select {
 				case r.frames <- buf:
 				default: // consumer too slow, drop

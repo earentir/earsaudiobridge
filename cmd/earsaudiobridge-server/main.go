@@ -16,7 +16,7 @@ import (
 	"github.com/earentir/audiobridge/internal/server"
 )
 
-var appVersion = "0.1.114"
+var appVersion = "0.1.116"
 
 func main() {
 	var configFlag string
