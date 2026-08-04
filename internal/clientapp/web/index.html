@@ -197,6 +197,7 @@ button.apply:focus-visible,select:focus-visible,input:focus-visible,button.mute:
 let layout = null;
 let activeCompression = { codec: "none", bitrate: 96 };
 let volumeEditing = 0;
+let settingsDirty = false;
 const volumeTimers = new Map();
 
 const statCards = { playback: null, mic: null, clock: null, emptyNote: null };
@@ -751,13 +752,18 @@ function renderVolumeStrips() {
   }
 }
 
-function renderLayout() {
-  if (!layout) return;
+function renderSettingsForm() {
+  if (!layout || settingsDirty) return;
   document.getElementById("playbackEnabled").checked = layout.playback_enabled;
   document.getElementById("micEnabled").checked = layout.mic_enabled;
   document.getElementById("latency").value = layout.latency_ms;
   fillDeviceSelect(document.getElementById("playbackDevice"), layout.outputs, layout.playback_device);
   fillDeviceSelect(document.getElementById("micDevice"), layout.inputs, layout.mic_device);
+}
+
+function renderLayout() {
+  if (!layout) return;
+  renderSettingsForm();
   renderVolumeStrips();
 }
 
@@ -765,6 +771,16 @@ async function refreshLayout() {
   layout = await api("/api/state");
   renderLayout();
   updateHeaderFromLayout(layout);
+}
+
+function markSettingsDirty() {
+  settingsDirty = true;
+}
+
+for (const id of ["playbackEnabled", "micEnabled", "playbackDevice", "micDevice", "latency"]) {
+  const el = document.getElementById(id);
+  el.addEventListener("change", markSettingsDirty);
+  el.addEventListener("input", markSettingsDirty);
 }
 
 async function pollStats() {
@@ -852,7 +868,10 @@ document.getElementById("apply").onclick = () =>
     playback_device: document.getElementById("playbackDevice").value,
     mic_device: document.getElementById("micDevice").value,
     latency_ms: +document.getElementById("latency").value,
-  }).then(refreshLayout).catch(alert);
+  }).then(() => {
+    settingsDirty = false;
+    return refreshLayout();
+  }).catch(alert);
 
 refreshLayout().then(() => initPollPrefs()).catch(alert);
 </script>
