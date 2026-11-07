@@ -1,6 +1,6 @@
 module github.com/earentir/audiobridge
 
-go 1.26.4
+go 1.27.3
 
 require (
 	github.com/ebitengine/oto/v3 v3.3.2
